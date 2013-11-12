@@ -14,7 +14,9 @@
             android:layout_gravity="center"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true"
-            android:layout_marginRight="42dp"/>
+            android:layout_marginRight="42dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"/>
     <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -24,5 +26,7 @@
             android:layout_gravity="center"
             android:layout_alignParentTop="true"
             android:layout_alignParentLeft="true"
-            android:layout_marginLeft="21dp"/>
+            android:layout_marginLeft="21dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"/>
 </RelativeLayout>

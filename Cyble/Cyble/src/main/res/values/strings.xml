@@ -9,5 +9,15 @@
     <string name="start_scan">Scan</string>
     <string name="unknown_device">\"Unknown Device.\"</string>
     <string name="title_activity_device_control">Device Control actibity</string>
+    <string name="no_data">No Data</string>
+    <string name="ble_connected">Bluetooth Low Energy Connected</string>
+    <string name="ble_disconnected">Bluetooth Low Energy Disconnected</string>
+    <string name="label_device_address">Device Address</string>
+    <string name="label_state">Device State</string>
+    <string name="label_data">Device Data</string>
+    <string name="menu_disconnect">Disconnect</string>
+    <string name="menu_connect">Connect</string>
+    <string name="unknown_service">Unknown Service</string>
+    <string name="unknown_characteristic">Unknown Characteristic</string>
 
 </resources>

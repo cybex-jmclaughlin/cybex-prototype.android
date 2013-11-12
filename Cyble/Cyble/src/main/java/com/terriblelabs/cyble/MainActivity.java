@@ -1,13 +1,14 @@
 package com.terriblelabs.cyble;
 
+import android.annotation.TargetApi;
 import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -23,6 +24,7 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
+@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 
 public class MainActivity extends ListActivity {
   private final static int REQUEST_ENABLE_BT = 1;
@@ -92,13 +94,20 @@ public class MainActivity extends ListActivity {
     }
   }
 
+
+
   @Override
-  protected void onListItemClick(ListView l, View v, int position, long thisID){
-    BluetoothDevice device = mLeDeviceAdapter.getDevice(position);
-    BluetoothGatt mBluetoothGatt = device.connectGatt(this, false, null);
-
-    Log.i("TAG", "TEST");
-
+  public void onListItemClick(ListView l, View v, int position, long thisID){
+    final BluetoothDevice device = mLeDeviceAdapter.getDevice(position);
+    if (device == null) return;
+    final Intent intent = new Intent(this, DeviceControlActivity.class);
+    intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device.getName());
+    intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
+    if (mScanning) {
+      mBluetoothAdapter.stopLeScan(mLeScanCallback);
+      mScanning = false;
+    }
+    startActivity(intent);
   }
 
 
@@ -208,9 +217,10 @@ public class MainActivity extends ListActivity {
     }
   }
 
-  static class ViewHolder{
+  private class ViewHolder{
     TextView deviceAddress;
     TextView deviceName;
   }
+
 
 }
