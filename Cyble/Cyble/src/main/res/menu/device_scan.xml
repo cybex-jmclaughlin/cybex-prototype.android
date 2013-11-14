@@ -3,5 +3,9 @@
     <item android:id="@+id/scan_button"
           android:title="@string/start_scan"
           android:showAsAction="always" />
+    <item android:id="@+id/scanning_indicator"
+          android:title="@string/scanning"
+          android:showAsAction="always" />
+
 
 </menu>

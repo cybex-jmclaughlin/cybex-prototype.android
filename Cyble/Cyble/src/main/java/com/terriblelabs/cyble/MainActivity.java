@@ -32,6 +32,7 @@ public class MainActivity extends ListActivity {
   private boolean mScanning;
   private Handler mHandler;
   private LeDeviceListAdapter mLeDeviceAdapter;
+  private Menu headerMenu;
 
   // Stops scanning after 10 seconds.
   private static final long SCAN_PERIOD = 10000;
@@ -47,10 +48,13 @@ public class MainActivity extends ListActivity {
     setContentView(R.layout.activity_main);
     bindViews();
   }
+
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     // Inflate the menu; this adds items to the action bar if it is present.
     getMenuInflater().inflate(R.menu.device_scan, menu);
+    headerMenu = menu;
+    turnOnScanningButton();
     return true;
   }
 
@@ -94,8 +98,6 @@ public class MainActivity extends ListActivity {
     }
   }
 
-
-
   @Override
   public void onListItemClick(ListView l, View v, int position, long thisID){
     final BluetoothDevice device = mLeDeviceAdapter.getDevice(position);
@@ -110,18 +112,28 @@ public class MainActivity extends ListActivity {
     startActivity(intent);
   }
 
+  private void turnOffScanningButton() {
+    headerMenu.findItem(R.id.scan_button).setVisible(false);
+    headerMenu.findItem(R.id.scanning_indicator).setVisible(true);
+  }
+
+  private void turnOnScanningButton(){
+    headerMenu.findItem(R.id.scan_button).setVisible(true);
+    headerMenu.findItem(R.id.scanning_indicator).setVisible(false);
+  }
 
   private void scanLeDevice(final boolean enable) {
     if (enable) {
+      turnOffScanningButton();
       // Stops scanning after a pre-defined scan period.
       mHandler.postDelayed(new Runnable() {
         @Override
         public void run() {
+          turnOnScanningButton();
           mScanning = false;
           mBluetoothAdapter.stopLeScan(mLeScanCallback);
         }
       }, SCAN_PERIOD);
-
       mScanning = true;
       mBluetoothAdapter.startLeScan(mLeScanCallback);
     } else {

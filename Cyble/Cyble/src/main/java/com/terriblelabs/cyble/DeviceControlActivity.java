@@ -48,6 +48,7 @@ public class DeviceControlActivity extends Activity {
   private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
       new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
   private boolean mConnected = false;
+  private Menu headerMenu;
   private BluetoothGattCharacteristic mNotifyCharacteristic;
 
   private final String LIST_NAME = "NAME";
@@ -87,16 +88,19 @@ public class DeviceControlActivity extends Activity {
         mConnected = true;
         updateConnectionState(R.string.ble_connected);
         invalidateOptionsMenu();
+        hideConnectAndShowDisconnect();
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
         mConnected = false;
         updateConnectionState(R.string.ble_disconnected);
         invalidateOptionsMenu();
         clearUI();
+        hideDisconnectAndShowConnect();
       } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
         // Show all the supported services and characteristics on the user interface.
         displayGattServices(mBluetoothLeService.getSupportedGattServices());
       } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-        displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+        String data =  intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
+        displayData(data);
       }
     }
   };
@@ -158,6 +162,11 @@ public class DeviceControlActivity extends Activity {
 
     getActionBar().setTitle(mDeviceName);
     getActionBar().setDisplayHomeAsUpEnabled(true);
+
+    if (mBluetoothLeService == null){
+      mBluetoothLeService = new BluetoothLeService();
+    }
+    mBluetoothLeService.connect(mDeviceAddress);
     Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
     bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
   }
@@ -187,15 +196,24 @@ public class DeviceControlActivity extends Activity {
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
+    headerMenu = menu;
     getMenuInflater().inflate(R.menu.gatt_services, menu);
     if (mConnected) {
-      menu.findItem(R.id.menu_connect).setVisible(false);
-      menu.findItem(R.id.menu_disconnect).setVisible(true);
+      hideConnectAndShowDisconnect();
     } else {
-      menu.findItem(R.id.menu_connect).setVisible(true);
-      menu.findItem(R.id.menu_disconnect).setVisible(false);
+      hideDisconnectAndShowConnect();
     }
     return true;
+  }
+
+  private void hideConnectAndShowDisconnect(){
+    headerMenu.findItem(R.id.menu_connect).setVisible(false);
+    headerMenu.findItem(R.id.menu_disconnect).setVisible(true);
+  }
+
+  private void hideDisconnectAndShowConnect(){
+    headerMenu.findItem(R.id.menu_connect).setVisible(true);
+    headerMenu.findItem(R.id.menu_disconnect).setVisible(false);
   }
 
   @Override
@@ -231,6 +249,7 @@ public class DeviceControlActivity extends Activity {
       mDataField.setText(data);
     }
   }
+
 
   // Demonstrates how to iterate through the supported GATT Services/Characteristics.
   // In this sample, we populate the data structure that is bound to the ExpandableListView
