@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -18,6 +19,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -56,6 +58,7 @@ public class BluetoothLeService extends Service {
   // Implements callback methods for GATT events that the app cares about.  For example,
   // connection change and services discovered.
   private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
       String intentAction;
@@ -110,7 +113,7 @@ public class BluetoothLeService extends Service {
   private void broadcastUpdate(final String action,
                                final BluetoothGattCharacteristic characteristic) {
     final Intent intent = new Intent(action);
-    if (GattAttributes.integerServices.contains(characteristic.getUuid().toString())) {
+    if (GattAttributes.integerServices.contains(characteristic.getUuid().toString().toUpperCase())) {
       int format = BluetoothGattCharacteristic.FORMAT_UINT32;
       int value = characteristic.getIntValue(format, 0);
       intent.putExtra(CHARACTERISTIC_UPDATE, characteristic.getUuid().toString());
@@ -272,6 +275,10 @@ public class BluetoothLeService extends Service {
       return;
     }
     mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+        UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+    descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+    mBluetoothGatt.writeDescriptor(descriptor);
     }
 
 
@@ -282,6 +289,7 @@ public class BluetoothLeService extends Service {
    * @return A {@code List} of supported services.
    */
   public List<BluetoothGattService> getSupportedGattServices() {
+    if (mBluetoothGatt == null) return null;
     if (mBluetoothGatt == null) return null;
 
     return mBluetoothGatt.getServices();
