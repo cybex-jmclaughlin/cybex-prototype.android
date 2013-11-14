@@ -114,7 +114,8 @@ public class MainActivity extends ListActivity {
 
   private void turnOffScanningButton() {
     headerMenu.findItem(R.id.scan_button).setVisible(false);
-    headerMenu.findItem(R.id.scanning_indicator).setVisible(true);
+    headerMenu.findItem(R.id.scanning_indicator).setVisible(true)
+    ;
   }
 
   private void turnOnScanningButton(){

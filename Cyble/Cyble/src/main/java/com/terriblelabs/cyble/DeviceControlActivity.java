@@ -18,7 +18,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ExpandableListView;
-import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -39,8 +38,6 @@ public class DeviceControlActivity extends Activity {
   public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
   public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
-  private TextView mConnectionState;
-  private TextView mDataField;
   private String mDeviceName;
   private String mDeviceAddress;
   private ExpandableListView mGattServicesList;
@@ -50,6 +47,10 @@ public class DeviceControlActivity extends Activity {
   private boolean mConnected = false;
   private Menu headerMenu;
   private BluetoothGattCharacteristic mNotifyCharacteristic;
+  public TextView elapsedSecondsOutput;
+  public TextView currentMetsOutput;
+  public TextView heartRateOutput;
+  public TextView caloriesBurnedOutput;
 
   private final String LIST_NAME = "NAME";
   private final String LIST_UUID = "UUID";
@@ -64,7 +65,6 @@ public class DeviceControlActivity extends Activity {
         Log.e(TAG, "Unable to initialize Bluetooth");
         finish();
       }
-      // Automatically connects to the device upon successful start-up initialization.
       mBluetoothLeService.connect(mDeviceAddress);
     }
 
@@ -74,33 +74,25 @@ public class DeviceControlActivity extends Activity {
     }
   };
 
-  // Handles various events fired by the Service.
-  // ACTION_GATT_CONNECTED: connected to a GATT server.
-  // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-  // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-  // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-  //                        or notification operations.
+
   private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
       final String action = intent.getAction();
       if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
         mConnected = true;
-        updateConnectionState(R.string.ble_connected);
         invalidateOptionsMenu();
         hideConnectAndShowDisconnect();
+        subscribeToCharacteristics();
+
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
         mConnected = false;
-        updateConnectionState(R.string.ble_disconnected);
         invalidateOptionsMenu();
-        clearUI();
         hideDisconnectAndShowConnect();
-      } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-        // Show all the supported services and characteristics on the user interface.
-        displayGattServices(mBluetoothLeService.getSupportedGattServices());
       } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-        String data =  intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
-        displayData(data);
+        int value =  Integer.parseInt(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+        String uuid = intent.getStringExtra(BluetoothLeService.CHARACTERISTIC_UPDATE);
+        updateViews(uuid, value);
       }
     }
   };
@@ -139,11 +131,6 @@ public class DeviceControlActivity extends Activity {
         }
       };
 
-  private void clearUI() {
-    mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
-    mDataField.setText(R.string.no_data);
-  }
-
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -152,17 +139,27 @@ public class DeviceControlActivity extends Activity {
     final Intent intent = getIntent();
     mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
     mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
+    bindViews();
+    //connectToDevice();
 
-    // Sets up UI references.
+  }
+
+  public void bindViews(){
     ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
-    mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
-    mGattServicesList.setOnChildClickListener(servicesListClickListner);
-    mConnectionState = (TextView) findViewById(R.id.connection_state);
-    mDataField = (TextView) findViewById(R.id.data_value);
+    elapsedSecondsOutput = (TextView) findViewById(R.id.elapsedSecondsValue);
+    currentMetsOutput = (TextView) findViewById(R.id.currentMetsValue);
+    heartRateOutput = (TextView) findViewById(R.id.heartRateValue);
+    caloriesBurnedOutput = (TextView) findViewById(R.id.caloriesBurnedValue);
 
     getActionBar().setTitle(mDeviceName);
     getActionBar().setDisplayHomeAsUpEnabled(true);
 
+  }
+
+  public void subscribeToCharacteristics(){
+    gatherAndSubscribeToGattServices(mBluetoothLeService.getSupportedGattServices());
+  }
+  public void connectToDevice(){
     if (mBluetoothLeService == null){
       mBluetoothLeService = new BluetoothLeService();
     }
@@ -209,11 +206,15 @@ public class DeviceControlActivity extends Activity {
   private void hideConnectAndShowDisconnect(){
     headerMenu.findItem(R.id.menu_connect).setVisible(false);
     headerMenu.findItem(R.id.menu_disconnect).setVisible(true);
+    ((TextView) findViewById(R.id.device_state)).setText("Connected");
+
   }
 
   private void hideDisconnectAndShowConnect(){
     headerMenu.findItem(R.id.menu_connect).setVisible(true);
     headerMenu.findItem(R.id.menu_disconnect).setVisible(false);
+    ((TextView) findViewById(R.id.device_state)).setText("Disconnected");
+
   }
 
   @Override
@@ -223,7 +224,7 @@ public class DeviceControlActivity extends Activity {
     }
     switch(item.getItemId()) {
       case R.id.menu_connect:
-        mBluetoothLeService.connect(mDeviceAddress);
+        connectToDevice();
         return true;
       case R.id.menu_disconnect:
         mBluetoothLeService.disconnect();
@@ -235,26 +236,14 @@ public class DeviceControlActivity extends Activity {
     return super.onOptionsItemSelected(item);
   }
 
-  private void updateConnectionState(final int resourceId) {
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        mConnectionState.setText(resourceId);
-      }
-    });
-  }
-
   private void displayData(String data) {
     if (data != null) {
-      mDataField.setText(data);
-    }
+      Log.i("TAG", "TAG");
+     }
   }
 
 
-  // Demonstrates how to iterate through the supported GATT Services/Characteristics.
-  // In this sample, we populate the data structure that is bound to the ExpandableListView
-  // on the UI.
-  private void displayGattServices(List<BluetoothGattService> gattServices) {
+  private void gatherAndSubscribeToGattServices(List<BluetoothGattService> gattServices) {
     if (gattServices == null) return;
     String uuid = null;
     String unknownServiceString = getResources().getString(R.string.unknown_service);
@@ -289,23 +278,34 @@ public class DeviceControlActivity extends Activity {
             LIST_NAME, GattAttributes.lookup(uuid, unknownCharaString));
         currentCharaData.put(LIST_UUID, uuid);
         gattCharacteristicGroupData.add(currentCharaData);
+        if (gattCharacteristic.getValue() == null){
+          gattCharacteristic.setValue(0, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+        }
+        subscribeToNotifiable(gattCharacteristic);
+        updateViews(gattCharacteristic.getUuid().toString(), gattCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0));
       }
       mGattCharacteristics.add(charas);
       gattCharacteristicData.add(gattCharacteristicGroupData);
     }
+  }
 
-    SimpleExpandableListAdapter gattServiceAdapter = new SimpleExpandableListAdapter(
-        this,
-        gattServiceData,
-        android.R.layout.simple_expandable_list_item_2,
-        new String[] {LIST_NAME, LIST_UUID},
-        new int[] { android.R.id.text1, android.R.id.text2 },
-        gattCharacteristicData,
-        android.R.layout.simple_expandable_list_item_2,
-        new String[] {LIST_NAME, LIST_UUID},
-        new int[] { android.R.id.text1, android.R.id.text2 }
-    );
-    mGattServicesList.setAdapter(gattServiceAdapter);
+  private void subscribeToNotifiable(BluetoothGattCharacteristic characteristic){
+    if (GattAttributes.notifiableServices.contains(characteristic.getUuid().toString())){
+      mBluetoothLeService.setCharacteristicNotification(characteristic, true);
+    }
+
+  }
+
+  private void updateViews(String uuid, int value){
+    if (GattAttributes.ELAPSED_SECONDS_ATTR_UUID.equals(uuid)){
+      elapsedSecondsOutput.setText(value);
+    }else if (GattAttributes.CALORIES_BURNED_ATTR_UUID.equals(uuid)){
+      caloriesBurnedOutput.setText(value);
+    }else if (GattAttributes.CURRENT_METS_ATTR_UUID.equals(uuid)){
+      currentMetsOutput.setText(value);
+    }else if (GattAttributes.CURRENT_HEART_RATE_ATTR_UUID.equals(uuid)){
+      heartRateOutput.setText(value);
+    }
   }
 
   private static IntentFilter makeGattUpdateIntentFilter() {

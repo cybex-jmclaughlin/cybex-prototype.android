@@ -15,10 +15,16 @@ public class GattAttributes {
   public static String METERS_PER_HOUR_ATTR_UUID = "b7cf5c63-9c07-40c7-a6ad-6aa6d8ed031d";
   public static String CALORIES_BURNED_ATTR_UUID = "3d00bef9-375d-40de-88db-f220631bd8a4";
   public static String CALORIES_PER_HOUR_ATTR_UUID = "ac869a9f-9754-44ab-a280-c61b7a6d15be";
+  public static String CURRENT_POWER_ATTR_UUID  = "6E1EA3E8-CF5E-45C5-A61C-2F338220A77F";
+  public static String CURRENT_HEART_RATE_ATTR_UUID = "C9F0DCBF-DD99-4282-B74B-AC44BB5C013E";
+  public static String STRIDES_PER_MINUTE_ATTR_UUID = "065806B9-7AC6-4DCC-B42C-96BB712E0CEB";
+  public static String CURRENT_METS_ATTR_UUID = "E4A234EA-DC68-4B07-B435-485B9B3406FD";
   public static String SERIAL_ATTR_UUID = "6e12ade7-11b0-44f7-921a-0c11fb9b2bd1";
   public static String MODEL_ATTR_UUID = "74371ef2-4c10-4494-be1a-0503fc844cc9";
   public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
   public static ArrayList<String> integerServices = new ArrayList<String>();
+  public static ArrayList<String> stringServices = new ArrayList<String>();
+  public static ArrayList<String> notifiableServices = new ArrayList<String>();
   static {
     // Sample Services.
     attributes.put(WORKOUT_SERVICE_UUID, "Workout");
@@ -31,13 +37,20 @@ public class GattAttributes {
     attributes.put(CALORIES_PER_HOUR_ATTR_UUID, "Calories per Hour");
     attributes.put(SERIAL_ATTR_UUID, "Serial");
     attributes.put(MODEL_ATTR_UUID, "Model");
-  }
-  static{
+
     integerServices.add(ELAPSED_SECONDS_ATTR_UUID);
     integerServices.add(METERS_TRAVELED_ATTR_UUID);
     integerServices.add(METERS_PER_HOUR_ATTR_UUID);
     integerServices.add(CALORIES_BURNED_ATTR_UUID);
     integerServices.add(CALORIES_PER_HOUR_ATTR_UUID);
+
+    stringServices.add(SERIAL_ATTR_UUID);
+    stringServices.add(MODEL_ATTR_UUID);
+
+    notifiableServices.add(ELAPSED_SECONDS_ATTR_UUID);
+    notifiableServices.add(CURRENT_METS_ATTR_UUID);
+    notifiableServices.add(CALORIES_BURNED_ATTR_UUID);
+    notifiableServices.add(CURRENT_HEART_RATE_ATTR_UUID);
   }
   public static String lookup(String uuid, String defaultName) {
     String name = attributes.get(uuid);

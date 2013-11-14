@@ -3,54 +3,111 @@
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
               android:layout_margin="10dp">
-    <LinearLayout android:orientation="horizontal"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:layout_margin="10dp">
-        <TextView android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:text="@string/label_device_address"
-                  android:textSize="18sp"/>
-        <Space android:layout_width="5dp"
-               android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/device_address"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:textSize="18sp"/>
+
+    <TextView android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/label_device_address"
+              android:textSize="18sp"
+              android:layout_gravity="center_horizontal"
+              android:id="@+id/device_address"/>
+
+    <TextView android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/label_state"
+              android:textSize="18sp"
+              android:layout_gravity="center_horizontal"
+              android:id="@+id/device_state"/>
+
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:paddingTop="30dp"
+            android:layout_height="fill_parent">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="ElapsedSeconds"
+                android:id="@+id/elapsedSecondsLabel"/>
+
+        <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="0"
+                android:gravity="right"
+                android:paddingLeft="30dp"
+                android:id="@+id/elapsedSecondsValue"
+                android:layout_gravity="right"/>
     </LinearLayout>
-    <LinearLayout android:orientation="horizontal"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:layout_margin="10dp">
-        <TextView android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:text="@string/label_state"
-                  android:textSize="18sp"/>
-        <Space android:layout_width="5dp"
-               android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/connection_state"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="@string/ble_disconnected"
-                  android:textSize="18sp"/>
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:paddingTop="30dp"
+            android:layout_height="fill_parent">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Current Mets"
+                android:id="@+id/currentMetsLabel"/>
+
+        <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="0"
+                android:gravity="right"
+                android:id="@+id/currentMetsValue"
+                android:layout_gravity="right"/>
     </LinearLayout>
-    <LinearLayout android:orientation="horizontal"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:layout_margin="10dp">
-        <TextView android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:text="@string/label_data"
-                  android:textSize="18sp"/>
-        <Space android:layout_width="5dp"
-               android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/data_value"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="@string/no_data"
-                  android:textSize="18sp"/>
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:paddingTop="30dp"
+            android:layout_height="fill_parent">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Heart Rate"
+                android:id="@+id/heartRateLabel"/>
+
+        <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="0"
+                android:gravity="right"
+                android:id="@+id/heartRateValue"
+                android:layout_gravity="right"/>
     </LinearLayout>
-    <ExpandableListView android:id="@+id/gatt_services_list"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:paddingTop="30dp"
+            android:layout_height="fill_parent">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Calories Burned"
+                android:id="@+id/caloriesBurnedLabel"/>
+
+        <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="0"
+                android:gravity="right"
+                android:paddingLeft="30dp"
+                android:id="@+id/caloriesBurnedValue"
+                />
+    </LinearLayout>
+
+
 </LinearLayout>

@@ -47,6 +47,8 @@ public class BluetoothLeService extends Service {
       "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
   public final static String EXTRA_DATA =
       "com.example.bluetooth.le.EXTRA_DATA";
+  public final static String CHARACTERISTIC_UPDATE =
+      "UpdateForCharacteristicFound";
 
   //public final static UUID UUID_HEART_RATE_MEASUREMENT =
       //UUID.fromString(SampleGattAttributes.HEART_RATE_MEASUREMENT);
@@ -65,6 +67,7 @@ public class BluetoothLeService extends Service {
         // Attempts to discover services after successful connection.
         Log.i(TAG, "Attempting to start service discovery:" +
             mBluetoothGatt.discoverServices());
+
 
       } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
         intentAction = ACTION_GATT_DISCONNECTED;
@@ -110,6 +113,7 @@ public class BluetoothLeService extends Service {
     if (GattAttributes.integerServices.contains(characteristic.getUuid().toString())) {
       int format = BluetoothGattCharacteristic.FORMAT_UINT32;
       int value = characteristic.getIntValue(format, 0);
+      intent.putExtra(CHARACTERISTIC_UPDATE, characteristic.getUuid().toString());
       intent.putExtra(EXTRA_DATA, String.valueOf(value));
     } else {
       // For all other profiles, writes the data formatted in HEX.
@@ -268,13 +272,6 @@ public class BluetoothLeService extends Service {
       return;
     }
     mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-
-    // This is specific to Heart Rate Measurement.
-   // if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-    //  BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-    //      UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-   //   descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-    //  mBluetoothGatt.writeDescriptor(descriptor);
     }
 
 
