@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -274,10 +275,14 @@ public class BluetoothLeService extends Service {
       return;
     }
     Log.i("JARVIS - SUBSCRIBING TO", characteristic.getUuid().toString());
-    mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-    //BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattAttributes.IS_SUBSCRIBABLE);
-    //descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-    //mBluetoothGatt.writeDescriptor(descriptor);
+    boolean notificationResult = mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+    Log.i("JARVIS - DID IT WORK?", String.valueOf(notificationResult));
+    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattAttributes.IS_SUBSCRIBABLE);
+    descriptor.setValue(enabled ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : new byte[] { 0x00, 0x00 });
+    boolean writeDescriptorResult = mBluetoothGatt.writeDescriptor(descriptor);
+    Log.i("JARVIS - DID IT WRITE?", String.valueOf(mBluetoothGatt.writeDescriptor(descriptor)));
+
+
     }
 
 

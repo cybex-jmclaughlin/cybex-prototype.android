@@ -16,11 +16,8 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ExpandableListView;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -39,20 +36,13 @@ public class DeviceControlActivity extends Activity {
 
   private String mDeviceName;
   private String mDeviceAddress;
-  private ExpandableListView mGattServicesList;
   private BluetoothLeService mBluetoothLeService;
-  private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
-      new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
   private boolean mConnected = false;
   private Menu headerMenu;
   public TextView elapsedSecondsOutput;
   public TextView currentMetsOutput;
   public TextView heartRateOutput;
   public TextView caloriesBurnedOutput;
-  public String mNextInChain;
-  public HashMap<String, BluetoothGattCharacteristic>notifiableCharacteristicsHash = new HashMap();
-  private final String LIST_NAME = "NAME";
-  private final String LIST_UUID = "UUID";
 
   // Code to manage Service lifecycle.
   private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -84,7 +74,6 @@ public class DeviceControlActivity extends Activity {
         invalidateOptionsMenu();
         hideConnectAndShowDisconnect();
         gatherGattServices(mBluetoothLeService.getSupportedGattServices());
-        //startSubscriptionChain();
 
       } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)){
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
@@ -200,6 +189,7 @@ public class DeviceControlActivity extends Activity {
         onBackPressed();
         return true;
       case R.id.subscribe:
+        gatherGattServices(mBluetoothLeService.getSupportedGattServices());
         return true;
     }
     return super.onOptionsItemSelected(item);
@@ -211,10 +201,11 @@ public class DeviceControlActivity extends Activity {
     // Loops through available GATT Services.
     Log.i("JARVIS - GO THROUGH SERVICES", Integer.toString(gattServices.size()));
     for (BluetoothGattService gattService : gattServices) {
+      Log.i("JARVIS - GO THROUGH CHARACTERISTICS PER SERVICE", Integer.toString(gattService.getCharacteristics().size()));
       for (BluetoothGattCharacteristic gattCharacteristic : gattService.getCharacteristics()) {
         Log.i("JARVIS - Starting to subscribe", gattCharacteristic.getUuid().toString());
-        subscribeToNotifiable(gattCharacteristic);
-        //generateHashMap(gattCharacteristic);
+        BluetoothGattCharacteristic characteristic = gattCharacteristic;
+        subscribeToNotifiable(characteristic);
       }
     }
   }
@@ -224,6 +215,8 @@ public class DeviceControlActivity extends Activity {
     if (GattAttributes.notifiableServices.contains(characteristic.getUuid().toString().toUpperCase())){
       Log.i("JARVIS - THE RAW CHARACTERISTIC", characteristic.getUuid().toString().toUpperCase());
       mBluetoothLeService.setCharacteristicNotification(characteristic, true);
+    } else {
+      Log.i("JARVIS - NOT NOTIFIABLE", characteristic.getUuid().toString());
     }
 
   }
