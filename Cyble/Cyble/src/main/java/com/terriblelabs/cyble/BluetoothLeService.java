@@ -280,7 +280,7 @@ public class BluetoothLeService extends Service {
     BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattAttributes.IS_SUBSCRIBABLE);
     descriptor.setValue(enabled ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : new byte[] { 0x00, 0x00 });
     boolean writeDescriptorResult = mBluetoothGatt.writeDescriptor(descriptor);
-    Log.i("JARVIS - DID IT WRITE?", String.valueOf(mBluetoothGatt.writeDescriptor(descriptor)));
+    Log.i("JARVIS - DID IT WRITE?", String.valueOf(writeDescriptorResult));
 
 
     }

@@ -73,7 +73,6 @@ public class DeviceControlActivity extends Activity {
         mConnected = true;
         invalidateOptionsMenu();
         hideConnectAndShowDisconnect();
-        gatherGattServices(mBluetoothLeService.getSupportedGattServices());
 
       } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)){
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
@@ -100,7 +99,6 @@ public class DeviceControlActivity extends Activity {
     mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
     bindViews();
     Log.i("JARVIS ABOUT TO CONNECT", "onCreate");
-    connectToDevice();
   }
 
   public void bindViews(){
@@ -201,8 +199,9 @@ public class DeviceControlActivity extends Activity {
     // Loops through available GATT Services.
     Log.i("JARVIS - GO THROUGH SERVICES", Integer.toString(gattServices.size()));
     for (BluetoothGattService gattService : gattServices) {
-      Log.i("JARVIS - GO THROUGH CHARACTERISTICS PER SERVICE", Integer.toString(gattService.getCharacteristics().size()));
-      for (BluetoothGattCharacteristic gattCharacteristic : gattService.getCharacteristics()) {
+      List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+      Log.i("JARVIS - GO THROUGH CHARACTERISTICS PER SERVICE", Integer.toString(gattCharacteristics.size()));
+      for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
         Log.i("JARVIS - Starting to subscribe", gattCharacteristic.getUuid().toString());
         BluetoothGattCharacteristic characteristic = gattCharacteristic;
         subscribeToNotifiable(characteristic);
@@ -214,11 +213,9 @@ public class DeviceControlActivity extends Activity {
   private void subscribeToNotifiable(BluetoothGattCharacteristic characteristic){
     if (GattAttributes.notifiableServices.contains(characteristic.getUuid().toString().toUpperCase())){
       Log.i("JARVIS - THE RAW CHARACTERISTIC", characteristic.getUuid().toString().toUpperCase());
+      //mBluetoothLeService.readCharacteristic(characteristic);
       mBluetoothLeService.setCharacteristicNotification(characteristic, true);
-    } else {
-      Log.i("JARVIS - NOT NOTIFIABLE", characteristic.getUuid().toString());
     }
-
   }
 
 
