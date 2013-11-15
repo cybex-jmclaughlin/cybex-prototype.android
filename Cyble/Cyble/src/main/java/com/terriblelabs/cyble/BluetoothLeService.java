@@ -7,7 +7,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -19,7 +18,6 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -62,14 +60,13 @@ public class BluetoothLeService extends Service {
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
       String intentAction;
+      Log.i("JARVIS - STATE CHANGED", "HOPEFULLY WORKING");
       if (newState == BluetoothProfile.STATE_CONNECTED) {
         intentAction = ACTION_GATT_CONNECTED;
         mConnectionState = STATE_CONNECTED;
-        broadcastUpdate(intentAction);
-        Log.i(TAG, "Connected to GATT server.");
-        // Attempts to discover services after successful connection.
-        Log.i(TAG, "Attempting to start service discovery:" +
-            mBluetoothGatt.discoverServices());
+        if (mBluetoothGatt.discoverServices()){
+          broadcastUpdate(intentAction);
+        }
 
 
       } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -101,6 +98,7 @@ public class BluetoothLeService extends Service {
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt,
                                         BluetoothGattCharacteristic characteristic) {
+      Log.i("JARVIS - CHARACTERISTIC CHANGED", characteristic.getUuid().toString());
       broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
     }
   };
@@ -270,15 +268,16 @@ public class BluetoothLeService extends Service {
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
   public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
                                             boolean enabled) {
+
     if (mBluetoothAdapter == null || mBluetoothGatt == null) {
       Log.w(TAG, "BluetoothAdapter not initialized");
       return;
     }
+    Log.i("JARVIS - SUBSCRIBING TO", characteristic.getUuid().toString());
     mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-        UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-    descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-    mBluetoothGatt.writeDescriptor(descriptor);
+    //BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattAttributes.IS_SUBSCRIBABLE);
+    //descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+    //mBluetoothGatt.writeDescriptor(descriptor);
     }
 
 

@@ -2,6 +2,7 @@ package com.terriblelabs.cyble;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.UUID;
 
 /**
  * This class includes a small subset of standard GATT attributes for demonstration purposes.
@@ -21,7 +22,7 @@ public class GattAttributes {
   public static String CURRENT_METS_ATTR_UUID = "E4A234EA-DC68-4B07-B435-485B9B3406FD";
   public static String SERIAL_ATTR_UUID = "6E12ADE7-11B0-44F7-921A-0C11FB9B2BD1";
   public static String MODEL_ATTR_UUID = "74371EF2-4C10-4494-BE1A-0503FC844CC9";
-  public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
+  public static UUID IS_SUBSCRIBABLE = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
   public static ArrayList<String> integerServices = new ArrayList<String>();
   public static ArrayList<String> stringServices = new ArrayList<String>();
   public static ArrayList<String> notifiableServices = new ArrayList<String>();
