@@ -18,7 +18,11 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -33,6 +37,10 @@ public class BluetoothLeService extends Service {
   private String mBluetoothDeviceAddress;
   private BluetoothGatt mBluetoothGatt;
   private int mConnectionState = STATE_DISCONNECTED;
+  ArrayBlockingQueue<BluetoothGattService> mServiceToSubscribe = new ArrayBlockingQueue<BluetoothGattService>(12);
+  private Queue<BluetoothGattDescriptor> descriptorWriteQueue = new LinkedList<BluetoothGattDescriptor>();
+  private Queue<BluetoothGattCharacteristic> characteristicReadQueue = new LinkedList<BluetoothGattCharacteristic>();
+
 
   private static final int STATE_DISCONNECTED = 0;
   private static final int STATE_CONNECTING = 1;
@@ -51,8 +59,42 @@ public class BluetoothLeService extends Service {
   public final static String CHARACTERISTIC_UPDATE =
       "UpdateForCharacteristicFound";
 
-  //public final static UUID UUID_HEART_RATE_MEASUREMENT =
-      //UUID.fromString(SampleGattAttributes.HEART_RATE_MEASUREMENT);
+  private void processService() {
+    if (!mServiceToSubscribe.isEmpty()) {
+      BluetoothGattService service = null;
+      try {
+        service = mServiceToSubscribe.take();
+        UUID uuid = service.getUuid();
+        if (uuid.equals(GattAttributes.WORKOUT_SERVICE_UUID)) {
+          BluetoothGattCharacteristic elapsedSecondsCharacteristic = service.getCharacteristic(GattAttributes.ELAPSED_SECONDS_ATTR_UUID);
+          enableNotificationForService(true, mBluetoothGatt, elapsedSecondsCharacteristic);
+          BluetoothGattCharacteristic caloriesBurnedCharacteristic = service.getCharacteristic(GattAttributes.CALORIES_BURNED_ATTR_UUID);
+          enableNotificationForService(true, mBluetoothGatt, caloriesBurnedCharacteristic);
+          BluetoothGattCharacteristic currentHeartRateCharacteristic = service.getCharacteristic(GattAttributes.CURRENT_HEART_RATE_ATTR_UUID);
+          enableNotificationForService(true, mBluetoothGatt, currentHeartRateCharacteristic);
+          BluetoothGattCharacteristic currentMetsCharacteristic = service.getCharacteristic(GattAttributes.CURRENT_METS_ATTR_UUID);
+          enableNotificationForService(true, mBluetoothGatt, currentMetsCharacteristic);
+        }
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+  private void enableNotificationForService(boolean enable, BluetoothGatt gatt, BluetoothGattCharacteristic dataCharacteristic) {
+    gatt.setCharacteristicNotification(dataCharacteristic, enable);
+    BluetoothGattDescriptor descriptor = dataCharacteristic.getDescriptor(GattAttributes.CLIENT_CONFIG_UUID);
+
+    descriptor.setValue(enable ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+    writeGattDescriptor(descriptor);
+  }
+
+  public void writeGattDescriptor(BluetoothGattDescriptor d){
+    descriptorWriteQueue.add(d);
+        if(descriptorWriteQueue.size() == 1){
+          mBluetoothGatt.writeDescriptor(d);
+        }
+
+  }
 
   // Implements callback methods for GATT events that the app cares about.  For example,
   // connection change and services discovered.
@@ -61,9 +103,9 @@ public class BluetoothLeService extends Service {
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
       String intentAction;
-      Log.i("JARVIS - STATE CHANGED", "HOPEFULLY WORKING");
       if (newState == BluetoothProfile.STATE_CONNECTED) {
         intentAction = ACTION_GATT_CONNECTED;
+        Log.i("JARVIS", "CONNECTED");
         mConnectionState = STATE_CONNECTED;
         if (mBluetoothGatt.discoverServices()){
           broadcastUpdate(intentAction);
@@ -71,17 +113,47 @@ public class BluetoothLeService extends Service {
 
 
       } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+        Log.i("JARVIS", "DISCONNECTED");
         intentAction = ACTION_GATT_DISCONNECTED;
         mConnectionState = STATE_DISCONNECTED;
         Log.i(TAG, "Disconnected from GATT server.");
         broadcastUpdate(intentAction);
       }
     }
+    public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+      if (status == BluetoothGatt.GATT_SUCCESS) {
+        Log.d("JARVIS", "Callback: Wrote GATT Descriptor successfully.");
+      }
+      else{
+        Log.d("JARVIS", "Callback: Error writing GATT Descriptor: "+ status);
+      }
+      descriptorWriteQueue.remove();  //pop the item that we just finishing writing
+      //if there is more to write, do it!
+      if(descriptorWriteQueue.size() > 0)
+        mBluetoothGatt.writeDescriptor(descriptorWriteQueue.element());
+      else if(characteristicReadQueue.size() > 0)
+        mBluetoothGatt.readCharacteristic(characteristicReadQueue.element());
+    };
 
     @Override
     public void onServicesDiscovered(BluetoothGatt gatt, int status) {
       if (status == BluetoothGatt.GATT_SUCCESS) {
+        List<BluetoothGattService> services = gatt.getServices();
+        for (BluetoothGattService service : services) {
+          UUID uuid = service.getUuid();
+
+          try {
+            if (uuid.equals(GattAttributes.WORKOUT_SERVICE_UUID)) {
+              mServiceToSubscribe.put(service);
+            }
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+
+        }
+        processService();
         broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+
       } else {
         Log.w(TAG, "onServicesDiscovered received: " + status);
       }
@@ -91,8 +163,16 @@ public class BluetoothLeService extends Service {
     public void onCharacteristicRead(BluetoothGatt gatt,
                                      BluetoothGattCharacteristic characteristic,
                                      int status) {
+      characteristicReadQueue.remove();
       if (status == BluetoothGatt.GATT_SUCCESS) {
         broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+      }
+      else{
+        Log.d(TAG, "onCharacteristicRead error: " + status);
+      }
+
+      if(characteristicReadQueue.size() > 0){
+        mBluetoothGatt.readCharacteristic(characteristicReadQueue.element());
       }
     }
 
@@ -112,7 +192,11 @@ public class BluetoothLeService extends Service {
   private void broadcastUpdate(final String action,
                                final BluetoothGattCharacteristic characteristic) {
     final Intent intent = new Intent(action);
-    if (GattAttributes.integerServices.contains(characteristic.getUuid().toString().toUpperCase())) {
+    final UUID uuid = characteristic.getUuid();
+    if (uuid.equals(GattAttributes.ELAPSED_SECONDS_ATTR_UUID)
+      || uuid.equals(GattAttributes.CALORIES_BURNED_ATTR_UUID)
+      || uuid.equals(GattAttributes.CURRENT_HEART_RATE_ATTR_UUID)
+      || uuid.equals(GattAttributes.CURRENT_METS_ATTR_UUID)){
       int format = BluetoothGattCharacteristic.FORMAT_UINT32;
       int value = characteristic.getIntValue(format, 0);
       intent.putExtra(CHARACTERISTIC_UPDATE, characteristic.getUuid().toString());
@@ -193,18 +277,6 @@ public class BluetoothLeService extends Service {
       return false;
     }
 
-    // Previously connected device.  Try to reconnect.
-    if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
-        && mBluetoothGatt != null) {
-      Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-      if (mBluetoothGatt.connect()) {
-        mConnectionState = STATE_CONNECTING;
-        return true;
-      } else {
-        return false;
-      }
-    }
-
     final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
     if (device == null) {
       Log.w(TAG, "Device not found.  Unable to connect.");
@@ -253,38 +325,18 @@ public class BluetoothLeService extends Service {
    * @param characteristic The characteristic to read from.
    */
   public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
+
     if (mBluetoothAdapter == null || mBluetoothGatt == null) {
       Log.w(TAG, "BluetoothAdapter not initialized");
       return;
     }
-    mBluetoothGatt.readCharacteristic(characteristic);
+    characteristicReadQueue.add(characteristic);
+    //if there is only 1 item in the queue, then read it.  If more than 1, we handle asynchronously in the callback above
+    //GIVE PRECEDENCE to descriptor writes.  They must all finish first.
+    if((characteristicReadQueue.size() == 1) && (descriptorWriteQueue.size() == 0))
+      mBluetoothGatt.readCharacteristic(characteristic);
+
   }
-
-  /**
-   * Enables or disables notification on a give characteristic.
-   *
-   * @param characteristic Characteristic to act on.
-   * @param enabled If true, enable notification.  False otherwise.
-   */
-  @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
-  public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
-                                            boolean enabled) {
-
-    if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-      Log.w(TAG, "BluetoothAdapter not initialized");
-      return;
-    }
-    Log.i("JARVIS - SUBSCRIBING TO", characteristic.getUuid().toString());
-    boolean notificationResult = mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-    Log.i("JARVIS - DID IT WORK?", String.valueOf(notificationResult));
-    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattAttributes.IS_SUBSCRIBABLE);
-    descriptor.setValue(enabled ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : new byte[] { 0x00, 0x00 });
-    boolean writeDescriptorResult = mBluetoothGatt.writeDescriptor(descriptor);
-    Log.i("JARVIS - DID IT WRITE?", String.valueOf(writeDescriptorResult));
-
-
-    }
-
 
   /**
    * Retrieves a list of supported GATT services on the connected device. This should be

@@ -2,8 +2,6 @@ package com.terriblelabs.cyble;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -18,7 +16,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-import java.util.List;
+import java.util.UUID;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -75,13 +73,14 @@ public class DeviceControlActivity extends Activity {
         hideConnectAndShowDisconnect();
 
       } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)){
+        Log.i("JARVIS", "SERVICES DISCOVERED");
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
         mConnected = false;
         invalidateOptionsMenu();
         hideDisconnectAndShowConnect();
       } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
         String value =  intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
-        String uuid = intent.getStringExtra(BluetoothLeService.CHARACTERISTIC_UPDATE);
+        UUID uuid = UUID.fromString(intent.getStringExtra(BluetoothLeService.CHARACTERISTIC_UPDATE));
         updateViews(uuid, value);
       }
     }
@@ -187,47 +186,20 @@ public class DeviceControlActivity extends Activity {
         onBackPressed();
         return true;
       case R.id.subscribe:
-        gatherGattServices(mBluetoothLeService.getSupportedGattServices());
         return true;
     }
     return super.onOptionsItemSelected(item);
   }
 
-
-  private void gatherGattServices(List<BluetoothGattService> gattServices) {
-    if (gattServices == null) return;
-    // Loops through available GATT Services.
-    Log.i("JARVIS - GO THROUGH SERVICES", Integer.toString(gattServices.size()));
-    for (BluetoothGattService gattService : gattServices) {
-      List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
-      Log.i("JARVIS - GO THROUGH CHARACTERISTICS PER SERVICE", Integer.toString(gattCharacteristics.size()));
-      for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
-        Log.i("JARVIS - Starting to subscribe", gattCharacteristic.getUuid().toString());
-        BluetoothGattCharacteristic characteristic = gattCharacteristic;
-        subscribeToNotifiable(characteristic);
-      }
-    }
-  }
-
-
-  private void subscribeToNotifiable(BluetoothGattCharacteristic characteristic){
-    if (GattAttributes.notifiableServices.contains(characteristic.getUuid().toString().toUpperCase())){
-      Log.i("JARVIS - THE RAW CHARACTERISTIC", characteristic.getUuid().toString().toUpperCase());
-      //mBluetoothLeService.readCharacteristic(characteristic);
-      mBluetoothLeService.setCharacteristicNotification(characteristic, true);
-    }
-  }
-
-
-  private void updateViews(String uuid, String value){
+  private void updateViews(UUID uuid, String value){
     Log.i("JARVIS - UPDATING VIEW", value);
-    if (GattAttributes.ELAPSED_SECONDS_ATTR_UUID.equals(uuid.toUpperCase())){
+    if (GattAttributes.ELAPSED_SECONDS_ATTR_UUID.equals(uuid)){
       elapsedSecondsOutput.setText(value);
-    }else if (GattAttributes.CALORIES_BURNED_ATTR_UUID.equals(uuid.toUpperCase())){
+    }else if (GattAttributes.CALORIES_BURNED_ATTR_UUID.equals(uuid)){
       caloriesBurnedOutput.setText(value);
-    }else if (GattAttributes.CURRENT_METS_ATTR_UUID.equals(uuid.toUpperCase())){
+    } else if (GattAttributes.CURRENT_METS_ATTR_UUID.equals(uuid)){
       currentMetsOutput.setText(value);
-    }else if (GattAttributes.CURRENT_HEART_RATE_ATTR_UUID.equals(uuid.toUpperCase())){
+    }else if (GattAttributes.CURRENT_HEART_RATE_ATTR_UUID.equals(uuid)){
       heartRateOutput.setText(value);
     }
   }
