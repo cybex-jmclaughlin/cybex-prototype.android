@@ -2,8 +2,6 @@ package com.terriblelabs.cyble;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -17,8 +15,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
-
-import java.util.List;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -37,48 +33,52 @@ public class DeviceControlActivity extends Activity {
   private String mDeviceName;
   private String mDeviceAddress;
   private BluetoothLeService mBluetoothLeService;
-  private boolean mConnected = false;
+  private boolean mIsConnected = false;
   private Menu headerMenu;
   public TextView elapsedSecondsOutput;
   public TextView currentMetsOutput;
   public TextView heartRateOutput;
   public TextView caloriesBurnedOutput;
+  private boolean mIsBound = false;
+
 
   // Code to manage Service lifecycle.
   private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
-      mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-      if (!mBluetoothLeService.initialize()) {
-        Log.e(TAG, "Unable to initialize Bluetooth");
-        finish();
-      }
-      mBluetoothLeService.connect(mDeviceAddress);
+      BluetoothLeService.LocalBinder binder = (BluetoothLeService.LocalBinder) service;
+      mBluetoothLeService = binder.getService();
+      mIsBound = true;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
       mBluetoothLeService = null;
+      mIsBound = false;
     }
   };
 
 
-  private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+
+  public class GattReceiver extends BroadcastReceiver {
+    public GattReceiver() {
+      // Android needs the empty constructor.
+    }
+
     @Override
-    public void onReceive(Context context, Intent intent) {
+    public void onReceive(Context context, Intent intent){
       final String action = intent.getAction();
       if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-        Log.i("JARVIS", "CONNECTED");
-        mConnected = true;
         invalidateOptionsMenu();
         hideConnectAndShowDisconnect();
-
-      } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)){
+        mIsConnected = true;
       } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-        mConnected = false;
         invalidateOptionsMenu();
         hideDisconnectAndShowConnect();
+        mIsConnected = false;
+      } else if (BluetoothLeService.
+          ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
       } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
         String value =  intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
         String uuid = intent.getStringExtra(BluetoothLeService.CHARACTERISTIC_UPDATE);
@@ -87,18 +87,54 @@ public class DeviceControlActivity extends Activity {
     }
   };
 
+  void doUnbindService() {
+    if (mIsBound) {
+      // Detach our existing connection.
+      unbindService(mServiceConnection);
+      mIsBound = false;
+    }
+  }
+    private void registerReceiver() {
+      final IntentFilter intentFilter = new IntentFilter();
+      intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+      intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+      intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+      intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+      GattReceiver receiver = new GattReceiver();
+      registerReceiver(receiver, intentFilter);
+    }
 
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+
+    if (mIsBound) {
+      doUnbindService();
+      mIsBound = false;
+    }
+  }
+
+  @Override
+  protected void onStart() {
+    super.onStart();
+
+  }
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.gatt_services_characteristics);
-
     final Intent intent = getIntent();
     mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
     mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
+    // Always need to register our receiver.
+    registerReceiver();
     bindViews();
-    Log.i("JARVIS ABOUT TO CONNECT", "onCreate");
   }
 
   public void bindViews(){
@@ -114,6 +150,7 @@ public class DeviceControlActivity extends Activity {
   }
 
   public void connectToDevice(){
+    Log.i("JARVIS ABOUT TO CONNECT", "onCreate");
     if (mBluetoothLeService == null){
       mBluetoothLeService = new BluetoothLeService();
     }
@@ -122,34 +159,12 @@ public class DeviceControlActivity extends Activity {
     bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
   }
 
-  @Override
-  protected void onResume() {
-    super.onResume();
-    registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
-    if (mBluetoothLeService != null) {
-      final boolean result = mBluetoothLeService.connect(mDeviceAddress);
-      Log.d(TAG, "Connect request result=" + result);
-    }
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-    unregisterReceiver(mGattUpdateReceiver);
-  }
-
-  @Override
-  protected void onDestroy() {
-    super.onDestroy();
-    unbindService(mServiceConnection);
-    mBluetoothLeService = null;
-  }
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     headerMenu = menu;
     getMenuInflater().inflate(R.menu.gatt_services, menu);
-    if (mConnected) {
+    if (mIsConnected) {
       hideConnectAndShowDisconnect();
     } else {
       hideDisconnectAndShowConnect();
@@ -187,57 +202,23 @@ public class DeviceControlActivity extends Activity {
         onBackPressed();
         return true;
       case R.id.subscribe:
-        gatherGattServices(mBluetoothLeService.getSupportedGattServices());
         return true;
     }
     return super.onOptionsItemSelected(item);
   }
 
-
-  private void gatherGattServices(List<BluetoothGattService> gattServices) {
-    if (gattServices == null) return;
-    // Loops through available GATT Services.
-    Log.i("JARVIS - GO THROUGH SERVICES", Integer.toString(gattServices.size()));
-    for (BluetoothGattService gattService : gattServices) {
-      List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
-      Log.i("JARVIS - GO THROUGH CHARACTERISTICS PER SERVICE", Integer.toString(gattCharacteristics.size()));
-      for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
-        Log.i("JARVIS - Starting to subscribe", gattCharacteristic.getUuid().toString());
-        BluetoothGattCharacteristic characteristic = gattCharacteristic;
-        subscribeToNotifiable(characteristic);
-      }
-    }
-  }
-
-
-  private void subscribeToNotifiable(BluetoothGattCharacteristic characteristic){
-    if (GattAttributes.notifiableServices.contains(characteristic.getUuid().toString().toUpperCase())){
-      Log.i("JARVIS - THE RAW CHARACTERISTIC", characteristic.getUuid().toString().toUpperCase());
-      //mBluetoothLeService.readCharacteristic(characteristic);
-      mBluetoothLeService.setCharacteristicNotification(characteristic, true);
-    }
-  }
-
-
+  // Connect to the loca
   private void updateViews(String uuid, String value){
     Log.i("JARVIS - UPDATING VIEW", value);
-    if (GattAttributes.ELAPSED_SECONDS_ATTR_UUID.equals(uuid.toUpperCase())){
+    if (mBluetoothLeService.ELAPSED_SECONDS_ATTR_UUID.equals(uuid.toUpperCase())){
       elapsedSecondsOutput.setText(value);
-    }else if (GattAttributes.CALORIES_BURNED_ATTR_UUID.equals(uuid.toUpperCase())){
+    }else if (mBluetoothLeService.CALORIES_BURNED_ATTR_UUID.equals(uuid.toUpperCase())){
       caloriesBurnedOutput.setText(value);
-    }else if (GattAttributes.CURRENT_METS_ATTR_UUID.equals(uuid.toUpperCase())){
+    }else if (mBluetoothLeService.CURRENT_METS_ATTR_UUID.equals(uuid.toUpperCase())){
       currentMetsOutput.setText(value);
-    }else if (GattAttributes.CURRENT_HEART_RATE_ATTR_UUID.equals(uuid.toUpperCase())){
+    }else if (mBluetoothLeService.CURRENT_HEART_RATE_ATTR_UUID.equals(uuid.toUpperCase())){
       heartRateOutput.setText(value);
     }
   }
 
-  private static IntentFilter makeGattUpdateIntentFilter() {
-    final IntentFilter intentFilter = new IntentFilter();
-    intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-    intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-    intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
-    intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-    return intentFilter;
-  }
 }
